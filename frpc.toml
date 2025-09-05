@@ -1,0 +1,35 @@
+serverAddr = "139.196.53.82"
+serverPort = 7501
+
+
+[[proxies]]
+name = "msi-ubuntu22"
+type = "stcp"
+secretKey = "qq3278440884"
+localIP = "127.0.0.1"
+localPort = 22
+
+
+
+
+[[proxies]]
+name = "nginx"
+type = "tcp"
+localPort = 2002
+remotePort = 2002 
+localIP = "127.0.0.1"
+
+
+[[proxies]]
+name = "milvus"
+type = "tcp"
+localPort = 29530
+remotePort = 29530
+localIP = "127.0.0.1"
+
+[[proxies]]
+name = "milvus-zhiyin"
+type = "tcp"
+localPort = 19540
+remotePort = 19540
+localIP = "127.0.0.1"
