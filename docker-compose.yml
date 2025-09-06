@@ -13,6 +13,7 @@ services:
                   # 挂载Docker CLI工具
                   - /usr/bin/docker:/usr/bin/docker:ro
                   - ./docker_manager.py:/app/docker_manager.py
+                  - ./service.json:/app/service.json
             environment:
                   - PYTHONUNBUFFERED=1
                   - PYTHONDONTWRITEBYTECODE=1

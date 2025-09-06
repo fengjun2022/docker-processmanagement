@@ -1,0 +1,56 @@
+{
+  "pdocr": {
+    "service_id": "pdocr",
+    "name": "paddle-ocr-api",
+    "port": 8000,
+    "path": "/pdocr",
+    "startup_timeout": 180,
+    "idle_timeout": 300,
+    "description": "PaddleOCR文字识别服务"
+  },
+  "mineru": {
+    "service_id": "mineru",
+    "name": "mineru-api",
+    "port": 18000,
+    "path": "/mineru",
+    "startup_timeout": 180,
+    "idle_timeout": 300,
+    "description": "MinerU文档解析服务"
+  },
+  "voicevox": {
+    "service_id": "voicevox",
+    "name": "voicevox-voicevox-1",
+    "port": 50021,
+    "path": "/voicevox",
+    "startup_timeout": 150,
+    "idle_timeout": 300,
+    "description": "VOICEVOX语音合成服务"
+  },
+  "qwen-embedding": {
+    "service_id": "qwen-embedding",
+    "name": "qwen-embedding-4b",
+    "port": 30981,
+    "path": "/qwen-embedding-4b",
+    "startup_timeout": 200,
+    "idle_timeout": 600,
+    "description": "Qwen嵌入模型服务"
+  },
+  "coquai": {
+    "service_id": "coquai",
+    "name": "coqui-tts-gpu",
+    "port": 5003,
+    "path": "/coquai",
+    "startup_timeout": 200,
+    "idle_timeout": 600,
+    "description": "英文中文tts服务"
+  },
+  "whisper": {
+    "service_id": "whisper",
+    "name": "whisper-asr",
+    "port": 39000,
+    "path": "/whisper",
+    "startup_timeout": 200,
+    "idle_timeout": 600,
+    "description": "中日英 音转文"
+  }
+}

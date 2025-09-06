@@ -18,6 +18,7 @@ from dataclasses import dataclass
 import signal
 import sys
 import socket
+from pathlib import Path
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,8 +33,8 @@ class ContainerConfig:
     port: int
     path: str  # 修改为path，表示URL路径前缀
     startup_command: str
+    idle_timeout: int  = 0 # 5分钟无流量停止
     startup_timeout: int = 120
-    idle_timeout: int = 300  # 5分钟无流量停止
     description: str = ""
 
 
@@ -63,48 +64,16 @@ class ContainerStatus:
 
 class DockerProxyManager:
     """Docker容器代理管理器"""
-
     def __init__(self):
+        
         # Authorization配置
         self.required_auth = "MIIEIjANBgkqhkiG9w0BAQEFAAOCBA8AMIIECgKCBAEApg06X2uS+PjAW85nWKMX13/XrZUuWDN/dNOZsAxbDwUelt7UqIack3qKXL1Oa4M5LgPK8QpU0s0KOOsxmScC9XQShnnYomBVpUItGoow+orGAJRpqR3Vi+q1dFm1zOLACk3RTiotntf/WNUC2Pgec+A0rLInDy/i8dIVCK2zTRXalT5K2dzyQiFyilN3u7wZyTaB0ozvGNZ7NeqBX8pA4OuBYSrGYqACum3uYXptIxKMCJDyJvFiulTgmCfBEmPEYYsoNKEKdNOowdMSWmcZiA85BZNl9lvfTf1lQGcpuytkV/MWzCsui7dNdNDIT1E7uAXKGsmloHurR8BSTSZyFe16atsRtsU9Ug1ZPhj3SxrtSYOAfXyYu5/VwyTJE58FZEUaqlmhnNAQKcLc3YqpW208oGC1YWTWP4gcjax8e/k/7VNI/Iwu8WJ3WRB2cAq4Tw0MKEkOs5WiNpujRPZCBAEtP7kxiLZDbyOtVvR+XyoNtq5jZI/7SPNRhVVCXLh+Ci6eoIHsexNhB7D19ckO/4bJY8cACYrR/AutlENZsf38E4DOp9gwNA5R9g2Xq1A8nAoSHt/zHgDYPWBdZJ6D8idiOeQjRtaqzE1SEvATJAd4hHqcOXqXsg1AFE1EXGYo0seuEcpzRbpYjHm+wOdqB64KwlbzN0hhqvsy9iXQiz7qZAZyrQwt39TSN2IJDhRuFmUYNM7rFonI00mL23/L2lEBrK/QeS9TPc9J8uJyexSR2L26VeDKLbWbxeN/g5valcYF/0bOL4lHNqFjUHhBBbWLXXEipZVBu9uaV6TvfJkwcjhWu8deNA6WuHOdPBPq5541ICnzG+a6rVn0iKEWbOByYGLrUaaKkE3DJw0ZLnXdaGXJV/7lXu0mQy1vr6g0+3b1/nR9NCYcz0DWAeeTB5RlIhGGvoYC1oGZOXMZmzQgx7jKDF42nTy6GRWDm/wGRu8asXqY06AEsff9Qa97G75KkVmlbqZ1JBquOSHNTaRgTe/UdgXqFjRJ210ouVq0ETPqClLR6dSkUjFvcEvMKsNg7q4UMSFLFdgflM3vG11j9MvSGLxi2Qk0td1FF7Gt5dH1eB7tf8r/sa3FJzpAW6tKH2cM1QVnYNq5TxvyRr7hmJ3Ik6NDWpmIUNQdZUCzks1cyfkBlC0yjATCZ51OJAhmPzcEOAxWpN89Qu8L2AP7Upw8b4Kcp6OghXwPT+fI518lwa3B6Olk+KEmH+SapoQZ7rW62A9vSMxDLI8pz8N5/AH2VtPyOacyN/JJ4boldFienu1GPK6yOEgjRd4bDcHuDczPzlHvMAXozyI3ihCYFEWtT7uplVK2eiu2w0VgICjB/Vz+m8uaBdd943FaOwIDAQAB"
 
         # 健康检查主机
         self.health_check_host = '127.0.0.1'
 
-        # 配置容器
-        self.containers = {
-            'pdocr': ContainerConfig(
-                service_id='pdocr', name='paddle-ocr-api', port=8000, path='/pdocr',
-                startup_command='docker start paddle-ocr-api',
-                startup_timeout=180,
-                description='PaddleOCR文字识别服务'
-            ),
-            'mineru': ContainerConfig(
-                service_id='mineru', name='mineru-api', port=18000, path='/mineru',
-                startup_command='docker start mineru-api',
-                startup_timeout=180, description='MinerU文档解析服务'
-            ),
-            'voicevox': ContainerConfig(
-                service_id='voicevox', name='voicevox-voicevox-1', port=50021, path='/voicevox',
-                startup_command='docker start voicevox-voicevox-1',
-                startup_timeout=150, description='VOICEVOX语音合成服务'
-            ),
-            'qwen-embedding': ContainerConfig(
-                service_id='qwen-embedding', name='qwen-embedding-4b', port=30981, path='/qwen-embedding-4b',
-                startup_command='docker start qwen-embedding-4b',
-                startup_timeout=200, idle_timeout=600, description='Qwen嵌入模型服务'
-            ),
-            'coquai': ContainerConfig(
-                service_id='coquai', name='coqui-tts-gpu', port=5003, path='/coquai',
-                startup_command='docker start coqui-tts-gpu',
-                startup_timeout=200, idle_timeout=600, description='英文中文tts服务'
-            ),
-            'whisper': ContainerConfig(
-                service_id='whisper', name='whisper-asr', port=39000, path='/whisper',
-                startup_command='docker start whisper-asr',
-                startup_timeout=200, idle_timeout=600, description='中日英 音转文'
-            ),
-        }
+        # 从JSON文件加载容器配置
+        self.containers = self._load_service_config()
 
         # 路径到服务映射
         self.path_to_service = {config.path: service_id for service_id, config in self.containers.items()}
@@ -123,7 +92,104 @@ class DockerProxyManager:
         self._initialize_running_containers()
 
         logger.info(f"代理管理器初始化完成，监听2002端口")
-        logger.info(f"直接代理到各服务端口，管理服务: {list(self.containers.keys())}")
+        logger.info(f"从配置文件加载了 {len(self.containers)} 个服务")
+
+    def _load_service_config(self) -> Dict[str, ContainerConfig]:
+        """从JSON文件加载服务配置"""
+        try:
+            # 获取当前脚本所在目录
+            current_dir = Path(__file__).parent
+            config_file = current_dir / "service.json"
+
+            if not config_file.exists():
+                logger.error(f"配置文件不存在: {config_file}")
+                return self._get_default_config()
+
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+
+            containers = {}
+            for service_id, service_config in config_data.items():
+                try:
+                    # 自动生成启动命令：docker start + 容器名
+                    startup_command = f"docker start {service_config['name']}"
+
+                    containers[service_id] = ContainerConfig(
+                        service_id=service_config['service_id'],
+                        name=service_config['name'],
+                        port=service_config['port'],
+                        path=service_config['path'],
+                        startup_command=startup_command,
+                        startup_timeout=service_config.get('startup_timeout', 120),
+                        idle_timeout=service_config.get('idle_timeout', 300),
+                        description=service_config.get('description', '')
+                    )
+                    logger.info(f"加载服务配置: {service_id} -> {service_config['name']} (启动命令: {startup_command})")
+                except KeyError as e:
+                    logger.error(f"服务 {service_id} 配置缺少必要字段: {e}")
+                    continue
+                except Exception as e:
+                    logger.error(f"加载服务 {service_id} 配置时出错: {e}")
+                    continue
+
+            if not containers:
+                logger.warning("没有成功加载任何服务配置，使用默认配置")
+                return self._get_default_config()
+
+            logger.info(f"成功从 {config_file} 加载了 {len(containers)} 个服务配置")
+            return containers
+
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON配置文件格式错误: {e}")
+            return self._get_default_config()
+        except Exception as e:
+            logger.error(f"加载配置文件时出错: {e}")
+            return self._get_default_config()
+
+    def _get_default_config(self) -> Dict[str, ContainerConfig]:
+        """获取默认配置（作为备份）"""
+        logger.info("使用默认配置")
+        return {
+            'whisper': ContainerConfig(
+                service_id='whisper', name='whisper-asr', port=39000, path='/whisper',
+                startup_command='docker start whisper-asr',
+                startup_timeout=200, idle_timeout=600, description='中日英 音转文'
+            ),
+        }
+
+    def reload_config(self) -> bool:
+        """重新加载配置文件"""
+        try:
+            new_containers = self._load_service_config()
+            old_services = set(self.containers.keys())
+            new_services = set(new_containers.keys())
+
+            # 停止被移除的服务
+            removed_services = old_services - new_services
+            for service_id in removed_services:
+                if service_id in self.container_status:
+                    if self.container_status[service_id].is_running:
+                        self._stop_container(service_id)
+                    del self.container_status[service_id]
+                logger.info(f"移除服务: {service_id}")
+
+            # 更新容器配置
+            self.containers = new_containers
+            self.path_to_service = {config.path: service_id for service_id, config in self.containers.items()}
+
+            # 添加新服务的状态跟踪
+            added_services = new_services - old_services
+            for service_id in added_services:
+                config = self.containers[service_id]
+                self.container_status[service_id] = ContainerStatus(service_id=service_id, name=config.name)
+                logger.info(f"添加服务: {service_id}")
+
+            logger.info(f"配置重新加载完成，当前管理 {len(self.containers)} 个服务")
+            return True
+
+        except Exception as e:
+            logger.error(f"重新加载配置失败: {e}")
+            return False
 
     def _initialize_running_containers(self):
         """初始化时检查已运行的容器状态并开始流量计时"""
@@ -286,9 +352,13 @@ class DockerProxyManager:
 
                     status.is_running = is_actually_running
 
-                    if (status.is_running and status.last_traffic_time and
+                    if (status.is_running and
+                            status.last_traffic_time and
+                            config.idle_timeout > 0 and
                             current_time - status.last_traffic_time > timedelta(seconds=config.idle_timeout)):
+                        logger.info(f"无流量超时({config.idle_timeout}秒)，停止容器: {config.name}")
                         self._stop_container(service_id)
+
 
             except Exception as e:
                 logger.error(f"监控错误: {e}")
@@ -453,7 +523,6 @@ class DockerProxyManager:
 app = Flask(__name__)
 manager = DockerProxyManager()
 
-
 @app.route('/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'])
 def proxy_all(path):
     """主要的流量拦截和代理处理函数"""
@@ -565,13 +634,14 @@ def handle_admin_request(admin_path):
     elif admin_path == 'status' and request.method == 'GET':
         return manager.get_all_status()
 
-    elif admin_path.startswith('services/') and admin_path.endswith('/stop') and request.method == 'POST':
-        service_id = admin_path.split('/')[1]
-        if service_id in manager.containers:
-            success = manager._stop_container(service_id)
-            return {'success': success, 'message': '已停止' if success else '停止失败'}
-        else:
-            return {'success': False, 'message': f'未找到服务: {service_id}'}, 404
+    elif admin_path == 'reload-config' and request.method == 'POST':
+        success = manager.reload_config()
+        return {
+            'success': success,
+            'message': '配置重新加载成功' if success else '配置重新加载失败',
+            'service_count': len(manager.containers)
+        }
+
 
     elif admin_path == 'health' and request.method == 'GET':
         return {
